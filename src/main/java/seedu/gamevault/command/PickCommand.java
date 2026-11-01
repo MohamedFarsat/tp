@@ -77,7 +77,7 @@ public class PickCommand extends Command {
             message.append("How about: ").append(pickedGame).append(System.lineSeparator())
                     .append("(picked from ").append(matches.size()).append(" game(s) that fit ")
                     .append(criteria).append(")");
-            if (hasRatedGame(matches)) {
+            if (hasWeightedGame(matches)) {
                 message.append(System.lineSeparator())
                         .append("(Games rated up were more likely to be picked, and games rated down less likely.)");
             }
@@ -126,9 +126,14 @@ public class PickCommand extends Command {
         return matches.get(matches.size() - 1);
     }
 
-    private static boolean hasRatedGame(ArrayList<Game> matches) {
+    /**
+     * Returns whether the ratings changed any game's chance of being picked, i.e. some match has a weight other
+     * than 1. A game rated e.g. +2/-2 is rated but still has weight 1, so on its own it does not count.
+     * Comparing doubles with {@code !=} is safe here, as equal counts always give exactly 1.0.
+     */
+    private static boolean hasWeightedGame(ArrayList<Game> matches) {
         for (Game game : matches) {
-            if (game.isRated()) {
+            if (game.getPickWeight() != 1.0) {
                 return true;
             }
         }

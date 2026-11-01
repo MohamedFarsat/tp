@@ -6,6 +6,7 @@ import java.util.logging.Logger;
 import seedu.gamevault.exception.GameVaultException;
 import seedu.gamevault.game.Game;
 import seedu.gamevault.game.GameList;
+import seedu.gamevault.game.Thumb;
 import seedu.gamevault.storage.Storage;
 import seedu.gamevault.ui.Ui;
 
@@ -15,18 +16,16 @@ import seedu.gamevault.ui.Ui;
  * then saves the updated collection to the data file.
  * Ratings make {@code pick} favour games the group enjoyed (see {@link Game#getPickWeight()}).
  * The game is chosen by the number shown next to it in {@code list}, which starts from 1.
+ * {@link UnrateCommand} undoes a rating given by mistake.
  */
 public class RateCommand extends Command {
     public static final String COMMAND_WORD = "rate";
     public static final String USAGE = "rate INDEX up|down";
-    public static final String UP = "up";
-    public static final String DOWN = "down";
 
     private static final Logger logger = Logger.getLogger(RateCommand.class.getName());
 
     private final int displayNumber;
-    /** True for a thumbs up, false for a thumbs down. */
-    private final boolean isThumbsUp;
+    private final Thumb thumb;
 
     /**
      * Creates a command that rates the game shown with the given number in {@code list}.
@@ -34,12 +33,13 @@ public class RateCommand extends Command {
      * before then.
      *
      * @param displayNumber Number of the game as shown in {@code list} (at least 1).
-     * @param isThumbsUp True to give a thumbs up, false to give a thumbs down.
+     * @param thumb Whether to give a thumbs up or a thumbs down.
      */
-    public RateCommand(int displayNumber, boolean isThumbsUp) {
+    public RateCommand(int displayNumber, Thumb thumb) {
         assert displayNumber >= 1 : "Display number should be at least 1";
+        assert thumb != null : "Thumb should not be null";
         this.displayNumber = displayNumber;
-        this.isThumbsUp = isThumbsUp;
+        this.thumb = thumb;
     }
 
     @Override
@@ -49,22 +49,24 @@ public class RateCommand extends Command {
         }
 
         Game game = games.get(displayNumber - 1); // The list shows games from 1, while GameList counts from 0.
-        String direction = isThumbsUp ? UP : DOWN;
-        // Only reachable if the data file was edited by hand, but adding 1 would wrap round to a negative count.
-        int currentCount = isThumbsUp ? game.getThumbsUp() : game.getThumbsDown();
-        if (currentCount == Integer.MAX_VALUE) {
-            throw new GameVaultException(game.getTitle() + " already has the most thumbs " + direction
-                    + " GameVault can count (" + currentCount + ").");
+        if (!game.canAddRating(thumb)) {
+            throw new GameVaultException(game.getTitle() + " already has the most thumbs " + thumb.getKeyword()
+                    + " GameVault can count (" + game.getRatingCount(thumb) + ").");
         }
 
-        if (isThumbsUp) {
-            game.addThumbsUp();
-        } else {
-            game.addThumbsDown();
-        }
+        game.addRating(thumb);
         storage.save(games);
-        logger.log(Level.FINE, "Rated " + game.getTitle() + " " + direction + ", now " + game.describeRatings());
-        ui.showMessage("Thumbs " + direction + " for " + game.getTitle() + "!" + System.lineSeparator()
-                + game.getTitle() + " is now rated " + game.describeRatings() + " (thumbs up/thumbs down).");
+        logger.log(Level.FINE, "Rated " + game.getTitle() + " " + thumb.getKeyword() + ", now "
+                + game.describeRatings());
+        ui.showMessage("Thumbs " + thumb.getKeyword() + " for " + game.getTitle() + "!" + System.lineSeparator()
+                + describeNewRating(game));
+    }
+
+    /**
+     * Returns the game's counts after a change, e.g. {@code Catan is now rated +5/-1 (thumbs up/thumbs down).}
+     * Shared with {@link UnrateCommand}.
+     */
+    static String describeNewRating(Game game) {
+        return game.getTitle() + " is now rated " + game.describeRatings() + " (thumbs up/thumbs down).";
     }
 }

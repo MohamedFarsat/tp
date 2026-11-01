@@ -27,6 +27,7 @@ public class HelpCommand extends Command {
               tag     Adds tags to a game: tag INDEX TAG [MORE_TAGS]...
               log     Logs that a game was played: log INDEX /players COUNT [/date YYYY-MM-DD]
               rate    Gives a game a thumbs up or down after playing: rate INDEX up|down
+              unrate  Removes a thumbs up or down given by mistake: unrate INDEX up|down
               untag   Removes tags from a game: untag INDEX TAG [MORE_TAGS]...
               tags    Lists all tags in use and how many games have each.
               sort    Sorts your collection: sort title|players|time

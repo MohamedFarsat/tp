@@ -25,6 +25,10 @@ public class Game {
     public static final String RATINGS_FILE_KEY = "ratings";
     /** Separates the thumbs-up count from the thumbs-down count in the ratings field, e.g. {@code 5/1}. */
     public static final String RATINGS_FILE_SEPARATOR = "/";
+    /** Largest weight {@code pick} gives a game, so that a long-time favourite cannot crowd out every other game. */
+    public static final double MAX_PICK_WEIGHT = 5;
+    /** Smallest weight {@code pick} gives a game, the mirror of {@link #MAX_PICK_WEIGHT}. */
+    public static final double MIN_PICK_WEIGHT = 1 / MAX_PICK_WEIGHT;
     /** Value of {@code playTime} for a game whose play time has not been recorded. */
     private static final int NO_PLAY_TIME = 0;
 
@@ -289,19 +293,53 @@ public class Game {
     }
 
     /**
-     * Records one more thumbs up. Callers must check that the count is below {@link Integer#MAX_VALUE} first.
+     * Returns how many of the given thumb this game has, e.g. its number of thumbs up for {@link Thumb#UP}.
      */
-    public void addThumbsUp() {
-        assert thumbsUp < Integer.MAX_VALUE : "Thumbs-up count should not overflow";
-        thumbsUp++;
+    public int getRatingCount(Thumb thumb) {
+        return thumb == Thumb.UP ? thumbsUp : thumbsDown;
     }
 
     /**
-     * Records one more thumbs down. Callers must check that the count is below {@link Integer#MAX_VALUE} first.
+     * Returns whether one more of the given thumb can be recorded. This is only false when the count has reached
+     * {@link Integer#MAX_VALUE} (possible only by editing the data file), where adding 1 would wrap round to a
+     * negative number.
      */
-    public void addThumbsDown() {
-        assert thumbsDown < Integer.MAX_VALUE : "Thumbs-down count should not overflow";
-        thumbsDown++;
+    public boolean canAddRating(Thumb thumb) {
+        return getRatingCount(thumb) < Integer.MAX_VALUE;
+    }
+
+    /**
+     * Records one more thumbs up or thumbs down.
+     * Callers must check {@link #canAddRating} first, so the user can be told why nothing changed;
+     * the assertion here only catches programming errors.
+     */
+    public void addRating(Thumb thumb) {
+        assert canAddRating(thumb) : "Rating count should not overflow";
+        if (thumb == Thumb.UP) {
+            thumbsUp++;
+        } else {
+            thumbsDown++;
+        }
+    }
+
+    /**
+     * Returns whether this game has at least one of the given thumb that could be removed.
+     */
+    public boolean canRemoveRating(Thumb thumb) {
+        return getRatingCount(thumb) > 0;
+    }
+
+    /**
+     * Removes one thumbs up or thumbs down, e.g. to undo a rating given to the wrong game.
+     * Callers must check {@link #canRemoveRating} first.
+     */
+    public void removeRating(Thumb thumb) {
+        assert canRemoveRating(thumb) : "Rating count should not go below 0";
+        if (thumb == Thumb.UP) {
+            thumbsUp--;
+        } else {
+            thumbsDown--;
+        }
     }
 
     /**
@@ -324,13 +362,15 @@ public class Game {
     }
 
     /**
-     * Returns how strongly {@code pick} should favour this game: {@code (thumbsUp + 1) / (thumbsDown + 1)}.
+     * Returns how strongly {@code pick} should favour this game: {@code (thumbsUp + 1) / (thumbsDown + 1)},
+     * kept between {@link #MIN_PICK_WEIGHT} and {@link #MAX_PICK_WEIGHT}.
      * An unrated game has weight 1, a game rated +3/-0 has weight 4 (4 times as likely to be picked),
-     * and a game rated +0/-3 has weight 0.25. Adding 1 to both counts means the weight is never 0,
-     * so even a disliked game can still come up now and then.
+     * and a game rated +0/-3 has weight 0.25. Adding 1 to both counts means the weight is never 0, and the limits
+     * stop a game rated e.g. +30/-0 from being picked almost every time, so {@code pick} still feels random.
      */
     public double getPickWeight() {
-        return (thumbsUp + 1.0) / (thumbsDown + 1.0);
+        double weight = (thumbsUp + 1.0) / (thumbsDown + 1.0);
+        return Math.max(MIN_PICK_WEIGHT, Math.min(MAX_PICK_WEIGHT, weight));
     }
 
     //@@author Xandurs
