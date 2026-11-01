@@ -13,21 +13,33 @@ participant ":Ui" as UI
 activate GV
 GV -> P : parse("pick 4 /time 45")
 activate P
+P -> P : parsePick("4 /time 45")
+activate P
 P -> P : splitByPrefixes(...)
+P -> P : parsePositiveNumber(...)
 create PC
 P -> PC : new PickCommand(4, 45)
 activate PC
 PC --> P
 deactivate PC
+P --> P : command
+deactivate P
 P --> GV : command
 deactivate P
 
 GV -> PC : execute(games, ui, storage)
 activate PC
-PC -> GL : filterByPlayersAndTime(4, 45)
-activate GL
-GL --> PC : matches
-deactivate GL
+alt has time limit
+  PC -> GL : filterByPlayersAndTime(4, 45)
+  activate GL
+  GL --> PC : matches
+  deactivate GL
+else no time limit
+  PC -> GL : filterByPlayers(4)
+  activate GL
+  GL --> PC : matches
+  deactivate GL
+end
 
 alt matches is empty
   PC -> PC : build "nothing to pick from" message
@@ -39,10 +51,12 @@ else at least one match
   PC -> PC : pickedGame = matches.get(i)
 end
 
-PC -> GL : countWithoutPlayTime(4)
-activate GL
-GL --> PC : untimedCount
-deactivate GL
+opt has time limit
+  PC -> GL : countWithoutPlayTime(4)
+  activate GL
+  GL --> PC : untimedCount
+  deactivate GL
+end
 
 PC -> UI : showMessage(message)
 activate UI

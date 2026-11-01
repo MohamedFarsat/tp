@@ -157,7 +157,7 @@ The sequence diagram below shows what happens when the user enters `pick 4 /time
 
 ![Picking a random game](images/PickSequence.png)
 
-1. `Parser#parse(...)` sees the command word `pick` and calls `Parser#parsePick(...)`. This uses
+1. `Parser#parse(...)` sees the command word `pick` and calls `Parser#parsePick(...)`. `parsePick` uses
    `Parser#splitByPrefixes(...)` to separate `COUNT` (`4`) from the optional `/time` value (`45`), and checks both
    with `Parser#parsePositiveNumber(...)`, so an invalid value such as `pick 0` or `pick 4 /time soon` is rejected
    with a `GameVaultException` before any command is created.
@@ -168,7 +168,7 @@ The sequence diagram below shows what happens when the user enters `pick 4 /time
    not changed, so `pick` never saves to the data file.
 4. If no game matches, the message says there is nothing to pick from. Otherwise, `PickCommand` asks its `Random`
    object for `nextInt(matches.size())` and picks the game at that position.
-5. With a time limit, `PickCommand` also calls `GameList#countWithoutPlayTime(4)`. Games with no play time
+5. Only with a time limit, `PickCommand` also calls `GameList#countWithoutPlayTime(4)`. Games with no play time
    recorded cannot be known to fit in 45 minutes, so they are left out, and the message says how many were left
    out. This matches what `filter` does.
 6. `PickCommand` shows the result through `Ui#showMessage(...)`, e.g.
@@ -200,8 +200,8 @@ The sequence diagram below shows what happens when the user enters `pick 4 /time
   * Cons: The same checks would exist in two places, which is duplicate code and makes the commands more likely
     to drift apart.
 
-**Possible future improvement:** once play sessions are logged, `pick` could avoid games the group played
-recently, so the same favourite is not suggested every time.
+**Possible future improvement:** `pick` could use the play sessions recorded with `log` to avoid games the group
+played recently, so the same favourite is not suggested every time.
 <!-- @@author -->
 
 ### Saving and loading games (Storage)
