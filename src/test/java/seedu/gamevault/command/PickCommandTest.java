@@ -218,4 +218,20 @@ class PickCommandTest {
     void isExit_returnsFalse() {
         assertFalse(new PickCommand(4).isExit());
     }
+
+    //@@author MohamedFarsat
+    @Test
+    void execute_ratedButEvenGames_doesNotMentionRatings() {
+        games.get(0).setRatings(2, 2); // Rated, but weight 1, so the pick is still fully even.
+        executePick(4, alwaysLandingAt(0));
+        assertFalse(output.toString().contains("rated up"));
+    }
+
+    @Test
+    void execute_hugelyRatedFavourite_weightCappedSoOthersStillComeUp() {
+        // Catan's weight is capped at 5 (not 31), so with Codenames and Splendor (1 each) the total is 7.
+        games.get(0).setRatings(30, 0);
+        executePick(4, alwaysLandingAt(0.75)); // 0.75 * 7 = 5.25, just past Catan's 0-5.
+        assertTrue(output.toString().contains("How about: Codenames"));
+    }
 }

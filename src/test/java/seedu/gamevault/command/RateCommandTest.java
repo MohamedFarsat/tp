@@ -21,6 +21,7 @@ import org.junit.jupiter.api.io.TempDir;
 import seedu.gamevault.exception.GameVaultException;
 import seedu.gamevault.game.Game;
 import seedu.gamevault.game.GameList;
+import seedu.gamevault.game.Thumb;
 import seedu.gamevault.storage.Storage;
 import seedu.gamevault.ui.Ui;
 
@@ -51,7 +52,7 @@ class RateCommandTest {
 
     @Test
     void execute_thumbsUp_addsOneAndShowsNewRating() throws GameVaultException {
-        new RateCommand(1, true).execute(games, ui, storage);
+        new RateCommand(1, Thumb.UP).execute(games, ui, storage);
 
         assertEquals(1, games.get(0).getThumbsUp());
         assertEquals(0, games.get(0).getThumbsDown());
@@ -62,7 +63,7 @@ class RateCommandTest {
 
     @Test
     void execute_thumbsDown_addsOneAndShowsNewRating() throws GameVaultException {
-        new RateCommand(2, false).execute(games, ui, storage);
+        new RateCommand(2, Thumb.DOWN).execute(games, ui, storage);
 
         assertEquals(0, games.get(1).getThumbsUp());
         assertEquals(1, games.get(1).getThumbsDown());
@@ -71,9 +72,9 @@ class RateCommandTest {
 
     @Test
     void execute_ratedSeveralTimes_countsAddUp() throws GameVaultException {
-        new RateCommand(1, true).execute(games, ui, storage);
-        new RateCommand(1, true).execute(games, ui, storage);
-        new RateCommand(1, false).execute(games, ui, storage);
+        new RateCommand(1, Thumb.UP).execute(games, ui, storage);
+        new RateCommand(1, Thumb.UP).execute(games, ui, storage);
+        new RateCommand(1, Thumb.DOWN).execute(games, ui, storage);
 
         assertEquals("+2/-1", games.get(0).describeRatings());
         assertFalse(games.get(1).isRated());
@@ -81,8 +82,8 @@ class RateCommandTest {
 
     @Test
     void execute_validRating_savesRatingsToDataFile() throws GameVaultException, IOException {
-        new RateCommand(1, true).execute(games, ui, storage);
-        new RateCommand(1, false).execute(games, ui, storage);
+        new RateCommand(1, Thumb.UP).execute(games, ui, storage);
+        new RateCommand(1, Thumb.DOWN).execute(games, ui, storage);
 
         List<String> savedLines = Files.readAllLines(dataFile, StandardCharsets.UTF_8);
         assertEquals("Catan | 3 | 4 |  |  | ratings=1/1", savedLines.get(0));
@@ -92,7 +93,7 @@ class RateCommandTest {
     @Test
     void execute_noSuchGame_throwsExceptionAndChangesNothing() {
         GameVaultException exception = assertThrows(GameVaultException.class,
-                () -> new RateCommand(3, true).execute(games, ui, storage));
+                () -> new RateCommand(3, Thumb.UP).execute(games, ui, storage));
 
         assertEquals(DeleteCommand.getNoSuchGameMessage("3"), exception.getMessage());
         assertFalse(games.get(0).isRated());
@@ -104,7 +105,7 @@ class RateCommandTest {
         games.get(0).setRatings(Integer.MAX_VALUE, 0);
 
         GameVaultException exception = assertThrows(GameVaultException.class,
-                () -> new RateCommand(1, true).execute(games, ui, storage));
+                () -> new RateCommand(1, Thumb.UP).execute(games, ui, storage));
 
         assertTrue(exception.getMessage().contains("most thumbs up"));
         assertEquals(Integer.MAX_VALUE, games.get(0).getThumbsUp());
@@ -112,7 +113,7 @@ class RateCommandTest {
 
     @Test
     void execute_ratedGame_shownWithRatingInList() throws GameVaultException {
-        new RateCommand(1, true).execute(games, ui, storage);
+        new RateCommand(1, Thumb.UP).execute(games, ui, storage);
         output.reset();
 
         new ListCommand().execute(games, ui, storage);
@@ -135,6 +136,6 @@ class RateCommandTest {
 
     @Test
     void isExit_returnsFalse() {
-        assertFalse(new RateCommand(1, true).isExit());
+        assertFalse(new RateCommand(1, Thumb.UP).isExit());
     }
 }

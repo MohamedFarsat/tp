@@ -31,6 +31,7 @@ import seedu.gamevault.command.ListCommand;
 import seedu.gamevault.command.ListTagsCommand;
 import seedu.gamevault.command.LogCommand;
 import seedu.gamevault.command.TagCommand;
+import seedu.gamevault.command.UnrateCommand;
 import seedu.gamevault.command.UntagCommand;
 import seedu.gamevault.command.PickCommand;
 import seedu.gamevault.command.RateCommand;
@@ -572,11 +573,34 @@ class ParserTest {
         GameVaultException e = assertThrows(GameVaultException.class, () -> Parser.parse("rate 2 great"));
         assertTrue(e.getMessage().startsWith("The rating should be 'up' or 'down', but was 'great'."));
         e = assertThrows(GameVaultException.class, () -> Parser.parse("rate 2 up down"));
-        assertTrue(e.getMessage().startsWith("Too many words after 'rate'."));
+        assertTrue(e.getMessage().startsWith("Too many words: expected only INDEX and up/down."));
         e = assertThrows(GameVaultException.class, () -> Parser.parse("rate up 2"));
         assertEquals("INDEX should be a whole number, but was 'up'.", e.getMessage());
         assertThrows(GameVaultException.class, () -> Parser.parse("rate 0 up"));
         assertThrows(GameVaultException.class, () -> Parser.parse("rate -1 down"));
         assertThrows(GameVaultException.class, () -> Parser.parse("rate 2 +1"));
+    }
+
+    @Test
+    void parse_validUnrate_removesOneRating(@TempDir Path tempDir) throws GameVaultException {
+        GameList games = new GameList();
+        games.add(new Game("Catan", 3, 4));
+        games.get(0).setRatings(2, 1);
+        Storage storage = new Storage(tempDir.resolve("games.txt").toString());
+
+        assertInstanceOf(UnrateCommand.class, Parser.parse("unrate 1 up"));
+        run("UNRATE 1 Down", games, storage);
+
+        assertEquals("+2/-0", games.get(0).describeRatings());
+    }
+
+    @Test
+    void parse_unrateWithInvalidParts_throwsExceptionWithUnrateFormat() {
+        GameVaultException e = assertThrows(GameVaultException.class, () -> Parser.parse("unrate 1"));
+        assertTrue(e.getMessage().startsWith("Please say 'up' or 'down' after INDEX."));
+        assertTrue(e.getMessage().contains("Format: unrate INDEX up|down (e.g. unrate 2 down)"));
+        assertThrows(GameVaultException.class, () -> Parser.parse("unrate"));
+        assertThrows(GameVaultException.class, () -> Parser.parse("unrate 1 maybe"));
+        assertThrows(GameVaultException.class, () -> Parser.parse("unrate 0 up"));
     }
 }
