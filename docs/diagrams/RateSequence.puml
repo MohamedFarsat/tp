@@ -15,13 +15,18 @@ activate GV
 GV -> P : parse("rate 1 up")
 activate P
 P -> P : parseRate("1 up")
+activate P
+P -> P : parseRatingArguments(...)
 P -> P : parseIndex("1")
+P -> P : Thumb.fromKeyword("up")
 create RC
-P -> RC : new RateCommand(1, true)
+P -> RC : new RateCommand(1, UP)
 activate RC
 RC --> P
 deactivate RC
-P --> GV
+P --> P : command
+deactivate P
+P --> GV : command
 deactivate P
 
 GV -> RC : execute(games, ui, storage)
@@ -31,7 +36,11 @@ activate GL
 GL --> RC : game
 deactivate GL
 
-RC -> G : addThumbsUp()
+RC -> G : canAddRating(UP)
+activate G
+G --> RC : true
+deactivate G
+RC -> G : addRating(UP)
 activate G
 G --> RC
 deactivate G

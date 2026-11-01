@@ -441,6 +441,9 @@ Format: `rate INDEX up|down`
 * Use `up` if the group enjoyed the game, or `down` if they did not. `UP` and `Down` work too.
 * You can rate the same game as many times as you like, e.g. once after every game night. Each rating is added
   to the game's count of thumbs up or thumbs down.
+* You do not need to [`log`](#logging-a-play-session-log) a game before rating it, since not every group logs
+  every game they play.
+* Rated the wrong game? Use [`unrate`](#undoing-a-rating-unrate) to take the rating back.
 * Once a game has been rated, `list` (and other commands that show the game) show its counts after it,
   e.g. `Catan (3-4 players) +5/-1` for 5 thumbs up and 1 thumbs down.
 
@@ -456,7 +459,7 @@ ____________________________________________________________
 ```
 
 **How ratings affect `pick`:** each game that fits is given a weight of
-(thumbs up + 1) ÷ (thumbs down + 1), and `pick` chooses games in proportion to their weights:
+(thumbs up + 1) ÷ (thumbs down + 1), kept between 0.2 and 5, and `pick` chooses games in proportion to their weights:
 
 Rating | Weight | Compared with an unrated game
 -------|--------|------------------------------
@@ -464,9 +467,33 @@ Not rated (`+0/-0`) | 1 | Equally likely
 `+3/-0` | 4 | 4 times as likely
 `+2/-2` | 1 | Equally likely
 `+0/-3` | 0.25 | A quarter as likely
+`+30/-0` | 5 (the most) | 5 times as likely
+`+0/-30` | 0.2 (the least) | A fifth as likely
 
-A game with many thumbs down is picked less often, but never ruled out completely, so your group still gets
-the occasional surprise. Ratings do not change `filter`, which always shows every game that fits.
+The limits mean a long-time favourite is picked more often, but cannot crowd out every other game, and a game with
+many thumbs down is picked less often, but is never ruled out, so your group still gets the occasional surprise.
+Ratings do not change `filter`, which always shows every game that fits.
+
+### Undoing a rating: `unrate`
+
+Removes one thumbs up or thumbs down from a game, e.g. if you typed `rate 2 down` but meant `rate 3 down`.
+
+Format: `unrate INDEX up|down`
+
+* `INDEX` is the game's number in `list`, and must be a whole number of at least 1.
+* Use `up` to remove one thumbs up, or `down` to remove one thumbs down. The game's other ratings are kept.
+* If the game has no rating of that kind, GameVault tells you and changes nothing.
+
+Example of usage: `unrate 2 down`
+
+Expected output (when Codenames had 1 thumbs up and 1 thumbs down):
+
+```
+____________________________________________________________
+Removed a thumbs down from Codenames.
+Codenames is now rated +1/-0 (thumbs up/thumbs down).
+____________________________________________________________
+```
 
 <!-- @@author -->
 
@@ -638,5 +665,6 @@ Return | `return INDEX`, e.g. `return 2`
 List lent games | `lent`
 Log | `log INDEX /players COUNT [/date YYYY-MM-DD]`, e.g. `log 1 /players 4 /date 2026-10-30`
 Rate | `rate INDEX up\|down`, e.g. `rate 1 up`
+Unrate | `unrate INDEX up\|down`, e.g. `unrate 2 down`
 Help | `help`
 Exit | `exit`
