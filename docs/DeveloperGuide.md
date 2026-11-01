@@ -151,7 +151,9 @@ themselves, not on the order they were in before, so sorting twice gives the sam
 The `pick` command helps a host who cannot decide what to play. It picks one random game that fits tonight's
 group, using the format `pick COUNT [/time MINUTES]`, e.g. `pick 4 /time 45`. It is implemented by
 `Parser#parsePick` and `PickCommand`, and reuses the filtering methods of `GameList`, so `pick` and `filter` always
-agree on which games fit.
+agree on which games fit. The pick is weighted by the group's ratings (see
+[Rating games and weighted picking](#rating-games-and-weighted-picking)), and lent games are left out (see
+[Lending games to friends](#lending-games-to-friends)).
 
 The sequence diagram below shows what happens when the user enters `pick 4 /time 45`.
 
@@ -164,14 +166,19 @@ The sequence diagram below shows what happens when the user enters `pick 4 /time
 2. `parsePick` creates a `PickCommand(4, 45)`. If `/time` is not given, it uses `PickCommand(4)` instead, which
    stores `0` to mean "no time limit".
 3. `GameVault` calls `PickCommand#execute(...)`. With a time limit, it asks the `GameList` for
-   `filterByPlayersAndTime(4, 45)`. Without one, it uses `filterByPlayers(4)`. Either way, the collection itself is
-   not changed, so `pick` never saves to the data file.
-4. If no game matches, the message says there is nothing to pick from. Otherwise, `PickCommand` asks its `Random`
-   object for `nextInt(matches.size())` and picks the game at that position.
+   `filterByPlayersAndTime(4, 45)`. Without one, it uses `filterByPlayers(4)`. Both skip lent games. Either way, the
+   collection itself is not changed, so `pick` never saves to the data file.
+4. If no game matches, the message says there is nothing to pick from. Otherwise, `PickCommand#chooseWeighted(...)`
+   asks each match for its `Game#getPickWeight()` and adds them up. It then takes a random point along that total
+   (`Random#nextDouble()` times the total) and picks the game whose share the point falls in, so games rated up are
+   more likely to be chosen. If some match has a weight other than 1, the message says that ratings were used.
 5. Only with a time limit, `PickCommand` also calls `GameList#countWithoutPlayTime(4)`. Games with no play time
    recorded cannot be known to fit in 45 minutes, so they are left out, and the message says how many were left
    out. This matches what `filter` does.
-6. `PickCommand` shows the result through `Ui#showMessage(...)`, e.g.
+6. `PickCommand` calls `GameList#findLentFitting(4, 45)` (or `findLentFitting(4)` without a time limit) for the lent
+   games that would otherwise have fitted, and `LentCommand#describeLeftOut(...)` turns them into a note such as
+   `(Not considered because they are lent out: Catan (to Alice))`.
+7. `PickCommand` shows the result through `Ui#showMessage(...)`, e.g.
    `How about: Love Letter (2-4 players, 20 min)`.
 
 #### Design considerations
@@ -180,13 +187,14 @@ The sequence diagram below shows what happens when the user enters `pick 4 /time
 
 * **Alternative 1 (current choice):** `PickCommand` takes a `Random` object. The public constructors create a
   normal `new Random()`, while a package-private constructor lets tests pass in their own.
-  * Pros: Tests can pass a `Random` that always returns a chosen value, so they can check exactly which game is
-    picked, e.g. that position 2 of the matches is chosen and that a game that does not fit is never chosen.
+  * Pros: Tests can pass a `Random` whose `nextDouble()` always returns a chosen value, so they can check exactly
+    which game is picked, e.g. that a point 70% along the total weight lands on the second game, and that a game
+    that does not fit is never chosen.
   * Cons: One extra constructor that only tests use.
 * **Alternative 2:** Call `Math.random()` (or create a `new Random()`) inside `execute(...)`.
   * Pros: Slightly less code.
   * Cons: Tests could only check that *some* matching game was picked, not which one, so bugs such as an
-    off-by-one in choosing the position could go unnoticed.
+    off-by-one in the weighted choice could go unnoticed.
 
 **Aspect: Where the filtering logic lives**
 
